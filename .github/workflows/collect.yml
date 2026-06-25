@@ -1,11 +1,13 @@
 name: Digest normativo (raccolta + elaborazione)
 
-# Per ora avvio manuale (pulsante "Run workflow"). Lo scheduling giornaliero
-# automatico lo attiviamo nella fase finale, insieme all'email.
 on:
   workflow_dispatch:
+    inputs:
+      reset_state:
+        description: "Azzera lo storico e riparti da zero (lascia deselezionato per l'uso normale)"
+        type: boolean
+        default: false
 
-# Serve per salvare lo storico (state/seen.json) nel repo a fine esecuzione.
 permissions:
   contents: write
 
@@ -29,6 +31,8 @@ jobs:
 
       - name: Elaborazione - novita' e deduplica (fase 2)
         run: python process.py
+        env:
+          RESET_STATE: ${{ inputs.reset_state }}
 
       - name: Salva lo storico nel repo
         if: always()
