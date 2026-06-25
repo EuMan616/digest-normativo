@@ -25,6 +25,12 @@ sources:
     url: https://www.eiopa.europa.eu/media/news_en
     link_pattern: '-\d{4}-\d{2}-\d{2}_en$'
 
+  - id: ecb_vigilanza
+    name: BCE - Vigilanza bancaria europea (pubblicazioni)
+    type: rss
+    url: https://www.bankingsupervision.europa.eu/rss/pub.html   # CONFERMATO
+    # comunicati stampa BCE (opzionale): https://www.bankingsupervision.europa.eu/rss/press.html
+
   # ---- Italia: Banca d'Italia (3 sezioni del perimetro) ------------------- #
   - id: bankitalia_vigilanza
     name: Banca d'Italia - Vigilanza sistema bancario e finanziario
