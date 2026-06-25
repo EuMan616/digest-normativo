@@ -1,10 +1,9 @@
 # ============================================================================
 #  REGISTRO FONTI - digest normativo regolamentazione finanziaria IT/UE
 # ============================================================================
-#  Pannello di controllo. Per aggiungere una fonte: copia un blocco dello stesso
-#  "type" e cambia i campi. "url" puo' essere stringa o elenco di candidati
-#  (provati in ordine). Se un URL e' una pagina (non un feed), il programma
-#  cerca da solo il feed dichiarato nell'HTML (auto-rilevamento).
+#  "url" puo' essere stringa o elenco (provati in ordine). Se un URL e' una
+#  pagina (non un feed), il programma cerca da solo il feed nell'HTML.
+#  type: rss | rss_filtered | scrape | discovery | eurlex_anchor | link_target_only
 # ============================================================================
 
 sources:
@@ -13,24 +12,24 @@ sources:
   - id: esma
     name: ESMA - European Securities and Markets Authority
     type: rss
-    url: https://www.esma.europa.eu/rss.xml                 # CONFERMATO
+    url: https://www.esma.europa.eu/rss.xml
 
   - id: eba
     name: EBA - European Banking Authority
     type: rss
-    url: https://www.eba.europa.eu/news-press/news/rss.xml  # CONFERMATO
+    url: https://www.eba.europa.eu/news-press/news/rss.xml
 
   - id: eiopa
     name: EIOPA - European Insurance and Occupational Pensions Authority
-    type: scrape                            # sito senza feed: scraping mirato
+    type: scrape
     url: https://www.eiopa.europa.eu/media/news_en
-    link_pattern: '-\d{4}-\d{2}-\d{2}_en$'  # tiene solo gli articoli (URL con data)
+    link_pattern: '-\d{4}-\d{2}-\d{2}_en$'
 
   # ---- Italia: Banca d'Italia (3 sezioni del perimetro) ------------------- #
   - id: bankitalia_vigilanza
     name: Banca d'Italia - Vigilanza sistema bancario e finanziario
     type: rss
-    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/vigilanza&lingua=it   # CONFERMATO
+    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/vigilanza&lingua=it
 
   - id: bankitalia_antiriciclaggio
     name: Banca d'Italia - Supervisione e normativa antiriciclaggio
@@ -46,32 +45,68 @@ sources:
   - id: ivass
     name: IVASS - normativa e provvedimenti
     type: rss
-    url:                                   # stesso schema di Banca d'Italia (infra condivisa)
+    url:
       - https://www.ivass.it/util/index.rss.html?sezione=/normativa&lingua=it
-      - https://www.ivass.it/util/index.rss.html?lingua=it   # CONFERMATO (feed generale)
+      - https://www.ivass.it/util/index.rss.html?lingua=it
 
-  # ---- Italia: CONSOB (scraping, da affinare) ----------------------------- #
+  # ---- Italia: CONSOB (edizioni del Bollettino) --------------------------- #
   - id: consob
-    name: CONSOB - bollettino, newsletter, consultazioni
+    name: CONSOB - Bollettino (edizioni quindicinali)
     type: scrape
-    urls:
-      - https://www.consob.it/web/area-pubblica/bollettino
-      - https://www.consob.it/web/area-pubblica/newsletter/recenti
-      - https://www.consob.it/web/area-pubblica/consultazioni/in-corso
-    notes: "Selettori/pattern da affinare guardando i link grezzi del JSON."
+    url: https://www.consob.it/web/area-pubblica/bollettino
+    link_pattern: '/bollettino/periodo\d+'   # solo le edizioni; data nel titolo
+    notes: >
+      Segnale "nuovo bollettino + data". Le pagine consultazioni/newsletter sono
+      rese via JavaScript (non scrapeabili senza browser headless): per gli atti
+      CONSOB di portata generale ci si appoggia a Gazzetta Ufficiale e dirittobancario.
 
-  # ---- UE: legislazione (fase 1b) ----------------------------------------- #
-  - id: eurlex
-    name: EUR-Lex - GUUE serie L + delegati/RTS/ITS (filtrato)
-    type: eurlex_anchor
-    notes: "Implementazione dedicata in fase 1b."
-
-  # ---- Italia: legislazione primaria (fase 1b) ---------------------------- #
+  # ---- Italia: Gazzetta Ufficiale - Serie Generale (filtrata) ------------- #
   - id: gazzetta_ufficiale
-    name: Gazzetta Ufficiale - Serie Generale
-    type: rss
-    url: TODO_FEED_URL                     # da trovare in fase 1b
+    name: Gazzetta Ufficiale - Serie Generale (filtro materia finanziaria)
+    type: rss_filtered
+    url: https://www.gazzettaufficiale.it/rss/SG    # CONFERMATO (firehose, va filtrato)
+    include_keywords:                               # prima passata, da affinare sul reale
+      - banca d'italia
+      - banche
+      - bancari
+      - testo unico bancario
+      - tub
+      - testo unico della finanza
+      - tuf
+      - consob
+      - ivass
+      - covip
+      - intermediari finanziari
+      - intermediazione finanziaria
+      - mercati finanziari
+      - strumenti finanziari
+      - valori mobiliari
+      - assicurativ
+      - assicurazion
+      - riassicur
+      - antiriciclaggio
+      - riciclaggio
+      - cripto
+      - micar
+      - servizi di pagamento
+      - moneta elettronica
+      - istituti di pagamento
+      - sgr
+      - sicav
+      - sicaf
+      - oicr
+      - fondi comuni
+      - cartolarizzazion
+      - obbligazioni bancarie
+      - solvency
+      - fintech
 
+  # ---- UE: legislazione (EUR-Lex) ----------------------------------------- #
+  - id: eurlex
+    name: EUR-Lex - ricerca salvata reg. finanziaria (RSS)
+    type: rss
+    url: "https://eur-lex.europa.eu/IT/display-feed.rss?myRssId=zqe4%2F5Mg5EIwdPmm3XxVPsOJ%2FFgxKfaaQpZ0BstzLr8%3D"
+  # ---- Italia: Normattiva (solo link) ------------------------------------- #
   - id: normattiva
     name: Normattiva - testo consolidato (solo link)
     type: link_target_only
@@ -81,64 +116,21 @@ sources:
   - id: dirittobancario
     name: dirittobancario.it - flash news (discovery)
     type: discovery
-    url: https://www.dirittobancario.it/feed/               # CONFERMATO
+    url: https://www.dirittobancario.it/feed/
 
 
 # ============================================================================
-#  EUR-LEX: filtro a doppia rete (usato in fase 1b) - invariato
+#  EUR-LEX: atti-perimetro per costruire la ricerca salvata (riferimento)
 # ============================================================================
-eurlex:
-  subject_filter:
-    include:
-      - credit institutions / financial institutions
-      - securities / investment services / financial market
-      - insurance / occupational pensions
-      - money laundering / financial supervision
-      - crypto-assets / digital finance
-    exclude:
-      - agriculture, fisheries, environment-only (fuori perimetro)
-
-  anchor_acts:
-    banche_prudenziale:
-      - CRR    - Regulation (EU) No 575/2013
-      - CRD    - Directive 2013/36/EU
-      - BRRD   - Directive 2014/59/EU
-      - SRMR   - Regulation (EU) No 806/2014
-      - DGSD   - Directive 2014/49/EU
-    mercati:
-      - MiFID II      - Directive 2014/65/EU
-      - MiFIR         - Regulation (EU) No 600/2014
-      - MAR           - Regulation (EU) No 596/2014
-      - Short Selling - Regulation (EU) No 236/2012
-      - CSDR          - Regulation (EU) No 909/2014
-      - EMIR          - Regulation (EU) No 648/2012
-      - Prospectus    - Regulation (EU) 2017/1129
-      - Listing Act   - Regulation (EU) 2024/2809
-      - MMF           - Regulation (EU) 2017/1131
-      - BMR           - Regulation (EU) 2016/1011
-      - CRA           - Regulation (EC) No 1060/2009
-    gestione_risparmio:
-      - AIFMD          - Directive 2011/61/EU
-      - UCITS          - Directive 2009/65/EC
-      - ELTIF          - Regulation (EU) 2015/760
-      - Securitisation - Regulation (EU) 2017/2402
-      - ECSPR          - Regulation (EU) 2020/1503
-    assicurazioni_pensioni:
-      - Solvency II - Directive 2009/138/EC
-      - IDD         - Directive (EU) 2016/97
-      - PEPP        - Regulation (EU) 2019/1238
-      - IORP II     - Directive (EU) 2016/2341
-    cripto_digitale:
-      - MiCAR - Regulation (EU) 2023/1114
-      - DORA  - Regulation (EU) 2022/2554
-    pagamenti:
-      - PSD2 - Directive (EU) 2015/2366
-      - EMD  - Directive 2009/110/EC
-      - PSD3_PSR - PROPOSTA: tracciare la procedura, non un CELEX finale
-    antiriciclaggio:
-      - AMLR  - Regulation (EU) 2024/1624
-      - AMLD6 - Directive (EU) 2024/1640
-      - AMLA  - Regulation (EU) 2024/1620
-    finanza_sostenibile:
-      - SFDR     - Regulation (EU) 2019/2088
-      - Taxonomy - Regulation (EU) 2020/852
+eurlex_anchor_acts:
+  banche_prudenziale: [CRR 575/2013, CRD 2013/36, BRRD 2014/59, SRMR 806/2014, DGSD 2014/49]
+  mercati: [MiFID II 2014/65, MiFIR 600/2014, MAR 596/2014, Short Selling 236/2012,
+            CSDR 909/2014, EMIR 648/2012, Prospectus 2017/1129, Listing Act 2024/2809,
+            MMF 2017/1131, BMR 2016/1011, CRA 1060/2009]
+  gestione_risparmio: [AIFMD 2011/61, UCITS 2009/65, ELTIF 2015/760,
+                       Securitisation 2017/2402, ECSPR 2020/1503]
+  assicurazioni_pensioni: [Solvency II 2009/138, IDD 2016/97, PEPP 2019/1238, IORP II 2016/2341]
+  cripto_digitale: [MiCAR 2023/1114, DORA 2022/2554]
+  pagamenti: [PSD2 2015/2366, EMD 2009/110, "PSD3/PSR (proposta)"]
+  antiriciclaggio: [AMLR 2024/1624, AMLD6 2024/1640, AMLA 2024/1620]
+  finanza_sostenibile: [SFDR 2019/2088, Taxonomy 2020/852]
