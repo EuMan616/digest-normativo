@@ -236,10 +236,14 @@ def fetch_scrape(source: dict) -> tuple[list[Item], list[str]]:
             if href in seen:
                 continue
             seen.add(href)
+            # se il testo del link e' generico (es. "Vai"), usa l'attributo title
+            title = text
+            if len(text) < 8 and a.get("title"):
+                title = a["title"].strip()
             items.append(Item(
                 source_id=source["id"],
                 source_name=source["name"],
-                title=text or href,
+                title=title or href,
                 link=href,
                 published=None,
                 summary_raw="",
@@ -254,6 +258,29 @@ def fetch_scrape(source: dict) -> tuple[list[Item], list[str]]:
     return items, notes
 
 
+def _matches(text: str, includes: list[str], excludes: list[str]) -> bool:
+    t = text.lower()
+    if excludes and any(x.lower() in t for x in excludes):
+        return False
+    if includes:
+        return any(x.lower() in t for x in includes)
+    return True
+
+
+def fetch_rss_filtered(source: dict) -> tuple[list[Item], list[str]]:
+    """Come fetch_rss, ma tiene solo le voci che combaciano con le parole chiave
+    di materia (include_keywords / exclude_keywords). Per feed-firehose come la
+    Gazzetta Ufficiale Serie Generale."""
+    items, notes = fetch_rss(source)
+    if not items:
+        return items, notes
+    inc = source.get("include_keywords") or []
+    exc = source.get("exclude_keywords") or []
+    kept = [it for it in items if _matches(f"{it.title} {it.summary_raw}", inc, exc)]
+    notes.append(f"filtro materia: {len(kept)}/{len(items)} voci pertinenti")
+    return kept, notes
+
+
 def fetch_unconfigured(source: dict) -> tuple[list[Item], list[str]]:
     """Tipi non ancora implementati in fase 1 (es. eurlex)."""
     return [], [f"tipo '{source.get('type')}' da configurare in una fase successiva"]
@@ -262,6 +289,7 @@ def fetch_unconfigured(source: dict) -> tuple[list[Item], list[str]]:
 # Mappa: tipo fonte -> funzione
 FETCHERS = {
     "rss": fetch_rss,
+    "rss_filtered": fetch_rss_filtered,
     "discovery": fetch_discovery,
     "scrape": fetch_scrape,
     "eurlex_anchor": fetch_unconfigured,
