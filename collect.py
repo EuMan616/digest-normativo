@@ -109,6 +109,20 @@ def _clean_text(html_or_text: str, limit: int = 600) -> str:
 # --------------------------------------------------------------------------- #
 #  Fetcher per tipo
 # --------------------------------------------------------------------------- #
+def _entry_text(entry) -> str:
+    """Testo dell'item. Preferisce content:encoded (usato dalla Gazzetta
+    Ufficiale e dai feed WordPress) e ripiega su summary/description."""
+    content = entry.get("content")
+    if content:
+        try:
+            val = content[0].get("value", "")
+            if val:
+                return val
+        except Exception:
+            pass
+    return entry.get("summary", "")
+
+
 def _items_from_feed(feed, source: dict) -> list[Item]:
     items = []
     for e in feed.entries[:MAX_ITEMS_PER_SOURCE]:
@@ -118,7 +132,7 @@ def _items_from_feed(feed, source: dict) -> list[Item]:
             title=(e.get("title") or "").strip(),
             link=(e.get("link") or "").strip(),
             published=_parse_date(e),
-            summary_raw=_clean_text(e.get("summary", "")),
+            summary_raw=_clean_text(_entry_text(e)),
             item_type="rss",
             fetched_at=_now_iso(),
         ))
