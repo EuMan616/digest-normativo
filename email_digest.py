@@ -60,6 +60,27 @@ def _latest_summarized() -> Path | None:
     return Path(files[-1]) if files else None
 
 
+_MESI = ["", "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+         "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+
+
+def _format_date_it(iso: str | None) -> str:
+    if not iso:
+        return ""
+    try:
+        d = datetime.date.fromisoformat(iso)
+        return f"{d.day} {_MESI[d.month]} {d.year}"
+    except Exception:
+        return ""
+
+
+def _clean_title(t: str) -> str:
+    """Toglie annotazioni tipo '[pdf, 385.9 KB]' in coda al titolo."""
+    if not t:
+        return ""
+    return re.sub(r"\s*\[\s*pdf[^\]]*\]", "", t, flags=re.I).strip()
+
+
 # --- Composizione ------------------------------------------------------------
 def render_html(digest: dict) -> str:
     primary = digest.get("primary", [])
@@ -77,9 +98,10 @@ def render_html(digest: dict) -> str:
         parts.append('<h2 style="font-size:15px;text-transform:uppercase;'
                       'letter-spacing:.5px;color:#444;">Atti</h2>')
         for it in primary:
-            title = html.escape(it.get("title", ""))
+            title = html.escape(_clean_title(it.get("title", "")))
             source = html.escape(it.get("source_name", ""))
             link = html.escape(it.get("link", ""))
+            date_it = _format_date_it(it.get("published"))
             summary = html.escape(_strip_md(it.get("summary", ""))).replace("\n", "<br>")
             basis = it.get("summary_basis", "")
             also = it.get("also_in") or []
@@ -88,9 +110,12 @@ def render_html(digest: dict) -> str:
             if basis and "estratto" in basis:
                 flag = ('<div style="color:#9a6700;font-size:12px;margin-top:6px;">'
                         '&#9888; sintesi da estratto, verificare alla fonte</div>')
+            subtitle = (f'<div style="font-size:12px;color:#888;margin:0 0 8px 0;">{date_it}</div>'
+                        if date_it else '')
             parts.append(f"""<div style="{css_block}">
               <div style="font-size:12px;color:#888;">{source}{also_txt}</div>
-              <div style="font-size:16px;font-weight:600;margin:2px 0 8px 0;">{title}</div>
+              <div style="font-size:16px;font-weight:600;margin:2px 0 2px 0;">{title}</div>
+              {subtitle}
               <div style="font-size:14px;">{summary}</div>
               {flag}
               <div style="margin-top:8px;"><a href="{link}"
@@ -122,7 +147,10 @@ def render_text(digest: dict) -> str:
     lines = [f"DIGEST NORMATIVO - {digest.get('generated_at', _today())}",
              f"{len(primary)} atti, {len(signals)} segnalazioni", ""]
     for it in primary:
-        lines.append(f"[{it.get('source_name','')}] {it.get('title','')}")
+        lines.append(f"[{it.get('source_name','')}] {_clean_title(it.get('title',''))}")
+        date_it = _format_date_it(it.get("published"))
+        if date_it:
+            lines.append(date_it)
         lines.append(_strip_md(it.get("summary", "")))
         lines.append(f"Fonte: {it.get('link','')}")
         lines.append("")
