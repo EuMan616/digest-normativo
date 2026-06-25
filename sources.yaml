@@ -1,0 +1,145 @@
+# ============================================================================
+#  REGISTRO FONTI - digest normativo regolamentazione finanziaria IT/UE
+# ============================================================================
+#  Pannello di controllo del sistema. Per aggiungere una fonte: copia un blocco
+#  dello stesso "type" e cambia i campi. Nessun codice da toccare altrove.
+#
+#  "url" puo' essere una stringa o un elenco di candidati: il programma li prova
+#  in ordine e si ferma al primo che funziona.
+#
+#  NOTA: diversi URL qui sotto sono CANDIDATI da confermare con la prima
+#  esecuzione del workflow. Quelli giusti li blocchiamo dopo aver letto il log.
+# ============================================================================
+
+sources:
+
+  # ---- UE: autorita' di vigilanza (flusso intero) -------------------------
+  - id: esma
+    name: ESMA - European Securities and Markets Authority
+    type: rss
+    url:                                   # candidati - da confermare al primo run
+      - https://www.esma.europa.eu/rss.xml
+      - https://www.esma.europa.eu/press-news/esma-news/rss
+
+  - id: eba
+    name: EBA - European Banking Authority
+    type: rss
+    url: https://www.eba.europa.eu/news-press/news/rss.xml   # confermato
+
+  - id: eiopa
+    name: EIOPA - European Insurance and Occupational Pensions Authority
+    type: rss
+    url:                                   # candidati - da confermare
+      - https://www.eiopa.europa.eu/rss_en
+      - https://www.eiopa.europa.eu/media/news/rss_en
+
+  # ---- Italia: autorita' di vigilanza -------------------------------------
+  - id: bankitalia
+    name: Banca d'Italia - Vigilanza/Normativa
+    type: rss
+    url:                                   # candidati - da confermare; obiettivo:
+      - https://alert.bancaditalia.it/webApp/rss?LANGUAGE=it   # categoria Vigilanza
+    notes: "Da restringere alla categoria 'Vigilanza sul sistema bancario e finanziario'."
+
+  - id: ivass
+    name: IVASS - normativa e provvedimenti
+    type: rss
+    url: TODO_FEED_URL                     # URL RSS IVASS da trovare al primo run
+
+  - id: consob
+    name: CONSOB - bollettino, newsletter, consultazioni
+    type: scrape
+    urls:
+      - https://www.consob.it/web/area-pubblica/bollettino
+      - https://www.consob.it/web/area-pubblica/newsletter/recenti
+      - https://www.consob.it/web/area-pubblica/consultazioni/in-corso
+    notes: "Nessun RSS. Selettori da tarare dopo il primo run. Punto piu' fragile."
+
+  # ---- UE: legislazione (EUR-Lex) -----------------------------------------
+  - id: eurlex
+    name: EUR-Lex - GUUE serie L + delegati/RTS/ITS (filtrato)
+    type: eurlex_anchor
+    notes: "Implementazione dedicata in fase 1b. Vedi sezione 'eurlex' in fondo."
+
+  # ---- Italia: legislazione primaria --------------------------------------
+  - id: gazzetta_ufficiale
+    name: Gazzetta Ufficiale - Serie Generale
+    type: rss
+    url: TODO_FEED_URL                     # feed GU da trovare (insieme a EUR-Lex, fase 1b)
+    notes: "Trigger per la normativa primaria IT."
+
+  - id: normattiva
+    name: Normattiva - testo consolidato (solo link)
+    type: link_target_only
+    url: https://www.normattiva.it/
+
+  # ---- Antenna di scoperta (solo titolo+link, mai il testo) ---------------
+  - id: dirittobancario
+    name: dirittobancario.it - flash news (discovery)
+    type: discovery
+    url:                                   # candidati - da confermare
+      - https://www.dirittobancario.it/feed/
+      - https://www.dirittobancario.it/cat/flash-news/feed/
+    notes: >
+      Solo titolo+link per scoprire cosa e' nuovo; il testo NON viene mai
+      salvato (riassunti protetti da copyright). Verificare anche i ToS/robots.
+
+
+# ============================================================================
+#  EUR-LEX: filtro a doppia rete (usato in fase 1b)
+# ============================================================================
+eurlex:
+  subject_filter:
+    include:
+      - credit institutions / financial institutions
+      - securities / investment services / financial market
+      - insurance / occupational pensions
+      - money laundering / financial supervision
+      - crypto-assets / digital finance
+    exclude:
+      - agriculture, fisheries, environment-only (fuori perimetro)
+
+  anchor_acts:
+    banche_prudenziale:
+      - CRR    - Regulation (EU) No 575/2013     # cattura anche CRR3
+      - CRD    - Directive 2013/36/EU            # cattura anche CRD6
+      - BRRD   - Directive 2014/59/EU
+      - SRMR   - Regulation (EU) No 806/2014
+      - DGSD   - Directive 2014/49/EU
+    mercati:
+      - MiFID II      - Directive 2014/65/EU
+      - MiFIR         - Regulation (EU) No 600/2014
+      - MAR           - Regulation (EU) No 596/2014
+      - Short Selling - Regulation (EU) No 236/2012
+      - CSDR          - Regulation (EU) No 909/2014
+      - EMIR          - Regulation (EU) No 648/2012
+      - Prospectus    - Regulation (EU) 2017/1129
+      - Listing Act   - Regulation (EU) 2024/2809
+      - MMF           - Regulation (EU) 2017/1131
+      - BMR           - Regulation (EU) 2016/1011
+      - CRA           - Regulation (EC) No 1060/2009
+    gestione_risparmio:
+      - AIFMD          - Directive 2011/61/EU
+      - UCITS          - Directive 2009/65/EC
+      - ELTIF          - Regulation (EU) 2015/760
+      - Securitisation - Regulation (EU) 2017/2402
+      - ECSPR          - Regulation (EU) 2020/1503
+    assicurazioni_pensioni:
+      - Solvency II - Directive 2009/138/EC
+      - IDD         - Directive (EU) 2016/97
+      - PEPP        - Regulation (EU) 2019/1238
+      - IORP II     - Directive (EU) 2016/2341
+    cripto_digitale:
+      - MiCAR - Regulation (EU) 2023/1114
+      - DORA  - Regulation (EU) 2022/2554
+    pagamenti:
+      - PSD2 - Directive (EU) 2015/2366
+      - EMD  - Directive 2009/110/EC
+      - PSD3_PSR - PROPOSTA: tracciare la procedura, non un CELEX finale
+    antiriciclaggio:
+      - AMLR  - Regulation (EU) 2024/1624        # CELEX da confermare
+      - AMLD6 - Directive (EU) 2024/1640
+      - AMLA  - Regulation (EU) 2024/1620
+    finanza_sostenibile:
+      - SFDR     - Regulation (EU) 2019/2088
+      - Taxonomy - Regulation (EU) 2020/852
