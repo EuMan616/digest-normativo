@@ -28,6 +28,18 @@ SEEN_FILE = STATE_DIR / "seen.json"
 
 WINDOW_DAYS = 3        # alla prima esecuzione tiene solo gli atti datati negli ultimi N giorni
 
+# Titoli da scartare tra le "segnalazioni" discovery (eventi/marketing, non normativa)
+SIGNAL_STOPWORDS = [
+    "webinar", "convegno", "evento", "ne parliamo", "save the date",
+    "iscriviti", "iscrizioni", "corso ", "master ", "podcast", "intervista",
+    "rassegna stampa", "in vigore dal", "appuntamento",
+]
+
+
+def _is_signal_noise(title: str) -> bool:
+    t = title.lower()
+    return any(w in t for w in SIGNAL_STOPWORDS)
+
 
 def _today() -> str:
     return datetime.date.today().isoformat()
@@ -113,15 +125,27 @@ def run() -> int:
     seen, first_run = _load_seen()
 
     new_items = select_new(items, seen, first_run)
-    deduped = deduplicate(new_items)
 
-    # ordina: prima i piu' recenti (data nota), poi gli altri
-    deduped.sort(key=lambda x: x.get("published") or "", reverse=True)
+    # separa fonti ufficiali (digest primario) da antenna discovery (segnalazioni)
+    primary = [it for it in new_items if it.get("item_type") != "discovery"]
+    signals = [it for it in new_items if it.get("item_type") == "discovery"]
 
-    # salva il digest del giorno
+    primary = deduplicate(primary)
+    primary.sort(key=lambda x: x.get("published") or "", reverse=True)
+
+    # segnalazioni: togli rumore (eventi/marketing), deduplica, e scarta quelle
+    # che ripetono un atto gia' presente tra le fonti ufficiali
+    primary_keys = {_norm_title(it.get("title", "")) for it in primary}
+    signals = [it for it in signals if not _is_signal_noise(it.get("title", ""))]
+    signals = deduplicate(signals)
+    signals = [it for it in signals if _norm_title(it.get("title", "")) not in primary_keys]
+    signals.sort(key=lambda x: x.get("published") or "", reverse=True)
+
+    # salva il digest del giorno (due sezioni)
     DATA_DIR.mkdir(exist_ok=True)
+    digest = {"generated_at": _today(), "primary": primary, "signals": signals}
     digest_path = DATA_DIR / f"digest_{_today()}.json"
-    digest_path.write_text(json.dumps(deduped, ensure_ascii=False, indent=2), encoding="utf-8")
+    digest_path.write_text(json.dumps(digest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # aggiorna lo storico con TUTTO cio' che e' stato visto oggi
     STATE_DIR.mkdir(exist_ok=True)
@@ -136,18 +160,22 @@ def run() -> int:
     print("\n" + "=" * 60)
     print(f"  ELABORAZIONE  {_today()}")
     print("=" * 60)
-    print(f"  Voci grezze in ingresso:     {len(items)}")
-    print(f"  Prima esecuzione:            {'si' if first_run else 'no'}")
-    print(f"  Nuove (non gia' viste):      {len(new_items)}")
-    print(f"  Dopo deduplica:              {len(deduped)}")
-    print(f"  Storico totale memorizzato:  {len(updated)}")
+    print(f"  Voci grezze in ingresso:        {len(items)}")
+    print(f"  Prima esecuzione:               {'si' if first_run else 'no'}")
+    print(f"  Atti primari (da sintetizzare): {len(primary)}")
+    print(f"  Segnalazioni dirittobancario:   {len(signals)}")
+    print(f"  Storico totale memorizzato:     {len(updated)}")
     print(f"  Digest del giorno: {digest_path.relative_to(ROOT)}")
     print("=" * 60 + "\n")
-    if deduped:
-        print("Anteprima titoli del digest:")
-        for it in deduped[:12]:
+    if primary:
+        print("ATTI PRIMARI:")
+        for it in primary[:15]:
             also = f"  [+{len(it['also_in'])} fonti]" if it.get("also_in") else ""
-            print(f"  - ({it.get('source_id')}) {it.get('title','')[:80]}{also}")
+            print(f"  - ({it.get('source_id')}) {it.get('title','')[:78]}{also}")
+    if signals:
+        print("\nSEGNALAZIONI (solo link, non sintetizzate):")
+        for it in signals[:10]:
+            print(f"  - {it.get('title','')[:78]}")
     return 0
 
 
