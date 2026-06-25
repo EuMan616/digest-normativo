@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import sys
+import re
 import ssl
 import html
 import json
@@ -40,6 +41,18 @@ SMTP_PORT = 465
 
 def _today() -> str:
     return datetime.date.today().isoformat()
+
+
+def _strip_md(text: str) -> str:
+    """Toglie eventuale markdown residuo dal riassunto (intestazioni, grassetti,
+    trattini di elenco), cosi' la formattazione e' uniforme a prescindere dal modello."""
+    if not text:
+        return ""
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)     # # intestazioni
+    text = text.replace("**", "").replace("__", "")        # **grassetto**
+    text = re.sub(r"(?m)^\s*[-*]\s+", "", text)            # - elenco
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
 
 
 def _latest_summarized() -> Path | None:
@@ -67,7 +80,7 @@ def render_html(digest: dict) -> str:
             title = html.escape(it.get("title", ""))
             source = html.escape(it.get("source_name", ""))
             link = html.escape(it.get("link", ""))
-            summary = html.escape(it.get("summary", "")).replace("\n", "<br>")
+            summary = html.escape(_strip_md(it.get("summary", ""))).replace("\n", "<br>")
             basis = it.get("summary_basis", "")
             also = it.get("also_in") or []
             also_txt = (" &middot; anche: " + html.escape(", ".join(also))) if also else ""
@@ -110,7 +123,7 @@ def render_text(digest: dict) -> str:
              f"{len(primary)} atti, {len(signals)} segnalazioni", ""]
     for it in primary:
         lines.append(f"[{it.get('source_name','')}] {it.get('title','')}")
-        lines.append(it.get("summary", ""))
+        lines.append(_strip_md(it.get("summary", "")))
         lines.append(f"Fonte: {it.get('link','')}")
         lines.append("")
     if signals:
