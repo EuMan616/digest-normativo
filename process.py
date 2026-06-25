@@ -27,7 +27,7 @@ DATA_DIR = ROOT / "data"
 STATE_DIR = ROOT / "state"
 SEEN_FILE = STATE_DIR / "seen.json"
 
-WINDOW_DAYS = 3        # alla prima esecuzione tiene solo gli atti datati negli ultimi N giorni
+WINDOW_DAYS = 2        # tiene solo gli atti pubblicati ieri/oggi (recency stretta)
 
 # Titoli da scartare tra le "segnalazioni" discovery (eventi/marketing, non normativa)
 SIGNAL_STOPWORDS = [
