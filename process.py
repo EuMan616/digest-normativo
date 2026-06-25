@@ -15,6 +15,7 @@ ripropone le stesse cose. Si lancia dopo collect.py:  python process.py
 from __future__ import annotations
 
 import sys
+import os
 import re
 import json
 import glob
@@ -51,7 +52,10 @@ def _latest_collected() -> Path | None:
 
 
 def _load_seen() -> tuple[set[str], bool]:
-    """Ritorna (insieme_uid_gia_visti, prima_esecuzione)."""
+    """Ritorna (insieme_uid_gia_visti, prima_esecuzione).
+    Se la variabile RESET_STATE e' attiva, riparte da zero (storico azzerato)."""
+    if os.environ.get("RESET_STATE", "").strip().lower() in ("1", "true", "yes"):
+        return set(), True
     if not SEEN_FILE.exists():
         return set(), True
     try:
