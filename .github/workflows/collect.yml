@@ -1,6 +1,11 @@
-name: Digest normativo (raccolta + elaborazione)
+name: Digest normativo
 
 on:
+  # Esecuzione automatica giornaliera. 05:00 UTC = 07:00 in Italia d'estate,
+  # 06:00 d'inverno (GitHub usa UTC e non gestisce l'ora legale).
+  schedule:
+    - cron: "0 5 * * *"
+  # Avvio manuale dal pulsante "Run workflow"
   workflow_dispatch:
     inputs:
       reset_state:
@@ -38,6 +43,13 @@ jobs:
         run: python summarize.py
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Invio email (fase 4)
+        run: python email_digest.py
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
 
       - name: Salva lo storico nel repo
         if: always()
