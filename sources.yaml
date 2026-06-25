@@ -104,8 +104,14 @@ sources:
   # ---- UE: legislazione (EUR-Lex) ----------------------------------------- #
   - id: eurlex
     name: EUR-Lex - ricerca salvata reg. finanziaria (RSS)
-    type: rss
+    type: rss_filtered
     url: "https://eur-lex.europa.eu/IT/display-feed.rss?myRssId=zqe4%2F5Mg5EIwdPmm3XxVPsOJ%2FFgxKfaaQpZ0BstzLr8%3D"
+    exclude_keywords:                  # rumore non regolatorio (concorrenza/aiuti di Stato)
+      - notifica preventiva di concentrazione
+      - non opposizione a un'operazione di concentrazione
+      - "(caso m."
+      - aiuto di stato
+      - aiuti di stato
   # ---- Italia: Normattiva (solo link) ------------------------------------- #
   - id: normattiva
     name: Normattiva - testo consolidato (solo link)
