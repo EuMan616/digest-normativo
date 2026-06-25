@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import sys
 import json
+import re
 import hashlib
 import datetime
 from dataclasses import dataclass, asdict
@@ -199,16 +200,20 @@ def fetch_discovery(source: dict) -> tuple[list[Item], list[str]]:
     return items, notes
 
 
-def fetch_scrape_consob(source: dict) -> tuple[list[Item], list[str]]:
-    """Scraper CONSOB - VERSIONE PRELIMINARE.
-    Senza un feed, estrae i link dalle pagine indicate. I selettori esatti
-    vanno tarati dopo la prima esecuzione live, quando vediamo l'HTML reale.
-    Per ora raccoglie i link 'plausibili' e li segnala come grezzi."""
+def fetch_scrape(source: dict) -> tuple[list[Item], list[str]]:
+    """Scraper generico per fonti senza feed.
+    Se la fonte ha 'link_pattern' (espressione regolare), tiene SOLO i link il
+    cui URL combacia col pattern (es. gli articoli con la data nell'indirizzo),
+    scartando menu e navigazione. Senza pattern, ripiega su un'euristica grezza."""
     notes: list[str] = []
     items: list[Item] = []
     urls = _candidate_urls(source)
     if not urls:
         return [], ["nessun URL configurato"]
+
+    pattern = source.get("link_pattern")
+    rx = re.compile(pattern) if pattern else None
+    seen: set[str] = set()
 
     for url in urls:
         try:
@@ -221,15 +226,20 @@ def fetch_scrape_consob(source: dict) -> tuple[list[Item], list[str]]:
         found = 0
         for a in main.find_all("a", href=True):
             text = a.get_text(" ", strip=True)
-            href = a["href"]
-            if len(text) < 12:          # scarta voci di menu/navigazione corte
+            href = urljoin(str(resp.url), a["href"])
+            if rx:
+                if not rx.search(href):
+                    continue
+            else:
+                if len(text) < 12:        # euristica: scarta voci di menu corte
+                    continue
+            if href in seen:
                 continue
-            if href.startswith("/"):
-                href = "https://www.consob.it" + href
+            seen.add(href)
             items.append(Item(
                 source_id=source["id"],
                 source_name=source["name"],
-                title=text,
+                title=text or href,
                 link=href,
                 published=None,
                 summary_raw="",
@@ -239,7 +249,8 @@ def fetch_scrape_consob(source: dict) -> tuple[list[Item], list[str]]:
             found += 1
             if found >= MAX_ITEMS_PER_SOURCE:
                 break
-        notes.append(f"{url} -> {found} link grezzi (selettori da tarare)")
+        kind = "link (pattern)" if rx else "link grezzi (selettori da tarare)"
+        notes.append(f"{url} -> {found} {kind}")
     return items, notes
 
 
@@ -252,7 +263,7 @@ def fetch_unconfigured(source: dict) -> tuple[list[Item], list[str]]:
 FETCHERS = {
     "rss": fetch_rss,
     "discovery": fetch_discovery,
-    "scrape": fetch_scrape_consob,
+    "scrape": fetch_scrape,
     "eurlex_anchor": fetch_unconfigured,
     "link_target_only": lambda s: ([], ["solo destinazione link, non interrogata"]),
     "email_alert": fetch_unconfigured,
