@@ -2,14 +2,14 @@
 #  REGISTRO FONTI - digest normativo regolamentazione finanziaria IT/UE
 # ============================================================================
 #  Pannello di controllo. Per aggiungere una fonte: copia un blocco dello stesso
-#  "type" e cambia i campi. "url" puo' essere stringa o elenco di candidati:
-#  il programma li prova in ordine. Se un URL e' una pagina (non un feed), il
-#  programma cerca da solo il feed dichiarato nell'HTML (auto-rilevamento).
+#  "type" e cambia i campi. "url" puo' essere stringa o elenco di candidati
+#  (provati in ordine). Se un URL e' una pagina (non un feed), il programma
+#  cerca da solo il feed dichiarato nell'HTML (auto-rilevamento).
 # ============================================================================
 
 sources:
 
-  # ---- UE: autorita' di vigilanza (flusso intero) ------------------------- #
+  # ---- UE: autorita' di vigilanza ----------------------------------------- #
   - id: esma
     name: ESMA - European Securities and Markets Authority
     type: rss
@@ -22,16 +22,15 @@ sources:
 
   - id: eiopa
     name: EIOPA - European Insurance and Occupational Pensions Authority
-    type: rss
-    url:                                   # auto-rilevamento dalla pagina news
-      - https://www.eiopa.europa.eu/rss.xml
-      - https://www.eiopa.europa.eu/media/news_en
+    type: scrape                            # sito senza feed: scraping mirato
+    url: https://www.eiopa.europa.eu/media/news_en
+    link_pattern: '-\d{4}-\d{2}-\d{2}_en$'  # tiene solo gli articoli (URL con data)
 
-  # ---- Italia: Banca d'Italia (3 sezioni del perimetro finanziario) ------- #
+  # ---- Italia: Banca d'Italia (3 sezioni del perimetro) ------------------- #
   - id: bankitalia_vigilanza
     name: Banca d'Italia - Vigilanza sistema bancario e finanziario
     type: rss
-    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/vigilanza&lingua=it   # CONFERMATO (pattern)
+    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/vigilanza&lingua=it   # CONFERMATO
 
   - id: bankitalia_antiriciclaggio
     name: Banca d'Italia - Supervisione e normativa antiriciclaggio
@@ -47,9 +46,9 @@ sources:
   - id: ivass
     name: IVASS - normativa e provvedimenti
     type: rss
-    url:                                   # auto-rilevamento (link RSS nel footer)
-      - https://www.ivass.it/
-      - https://www.ivass.it/normativa/
+    url:                                   # stesso schema di Banca d'Italia (infra condivisa)
+      - https://www.ivass.it/util/index.rss.html?sezione=/normativa&lingua=it
+      - https://www.ivass.it/util/index.rss.html?lingua=it   # CONFERMATO (feed generale)
 
   # ---- Italia: CONSOB (scraping, da affinare) ----------------------------- #
   - id: consob
@@ -59,7 +58,7 @@ sources:
       - https://www.consob.it/web/area-pubblica/bollettino
       - https://www.consob.it/web/area-pubblica/newsletter/recenti
       - https://www.consob.it/web/area-pubblica/consultazioni/in-corso
-    notes: "Selettori da affinare guardando i link grezzi del JSON. Fonte fragile."
+    notes: "Selettori/pattern da affinare guardando i link grezzi del JSON."
 
   # ---- UE: legislazione (fase 1b) ----------------------------------------- #
   - id: eurlex
@@ -72,7 +71,6 @@ sources:
     name: Gazzetta Ufficiale - Serie Generale
     type: rss
     url: TODO_FEED_URL                     # da trovare in fase 1b
-    notes: "Trigger normativa primaria IT."
 
   - id: normattiva
     name: Normattiva - testo consolidato (solo link)
