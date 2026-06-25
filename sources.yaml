@@ -1,51 +1,57 @@
 # ============================================================================
 #  REGISTRO FONTI - digest normativo regolamentazione finanziaria IT/UE
 # ============================================================================
-#  Pannello di controllo del sistema. Per aggiungere una fonte: copia un blocco
-#  dello stesso "type" e cambia i campi. Nessun codice da toccare altrove.
-#
-#  "url" puo' essere una stringa o un elenco di candidati: il programma li prova
-#  in ordine e si ferma al primo che funziona.
-#
-#  NOTA: diversi URL qui sotto sono CANDIDATI da confermare con la prima
-#  esecuzione del workflow. Quelli giusti li blocchiamo dopo aver letto il log.
+#  Pannello di controllo. Per aggiungere una fonte: copia un blocco dello stesso
+#  "type" e cambia i campi. "url" puo' essere stringa o elenco di candidati:
+#  il programma li prova in ordine. Se un URL e' una pagina (non un feed), il
+#  programma cerca da solo il feed dichiarato nell'HTML (auto-rilevamento).
 # ============================================================================
 
 sources:
 
-  # ---- UE: autorita' di vigilanza (flusso intero) -------------------------
+  # ---- UE: autorita' di vigilanza (flusso intero) ------------------------- #
   - id: esma
     name: ESMA - European Securities and Markets Authority
     type: rss
-    url:                                   # candidati - da confermare al primo run
-      - https://www.esma.europa.eu/rss.xml
-      - https://www.esma.europa.eu/press-news/esma-news/rss
+    url: https://www.esma.europa.eu/rss.xml                 # CONFERMATO
 
   - id: eba
     name: EBA - European Banking Authority
     type: rss
-    url: https://www.eba.europa.eu/news-press/news/rss.xml   # confermato
+    url: https://www.eba.europa.eu/news-press/news/rss.xml  # CONFERMATO
 
   - id: eiopa
     name: EIOPA - European Insurance and Occupational Pensions Authority
     type: rss
-    url:                                   # candidati - da confermare
-      - https://www.eiopa.europa.eu/rss_en
-      - https://www.eiopa.europa.eu/media/news/rss_en
+    url:                                   # auto-rilevamento dalla pagina news
+      - https://www.eiopa.europa.eu/rss.xml
+      - https://www.eiopa.europa.eu/media/news_en
 
-  # ---- Italia: autorita' di vigilanza -------------------------------------
-  - id: bankitalia
-    name: Banca d'Italia - Vigilanza/Normativa
+  # ---- Italia: Banca d'Italia (3 sezioni del perimetro finanziario) ------- #
+  - id: bankitalia_vigilanza
+    name: Banca d'Italia - Vigilanza sistema bancario e finanziario
     type: rss
-    url:                                   # candidati - da confermare; obiettivo:
-      - https://alert.bancaditalia.it/webApp/rss?LANGUAGE=it   # categoria Vigilanza
-    notes: "Da restringere alla categoria 'Vigilanza sul sistema bancario e finanziario'."
+    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/vigilanza&lingua=it   # CONFERMATO (pattern)
 
+  - id: bankitalia_antiriciclaggio
+    name: Banca d'Italia - Supervisione e normativa antiriciclaggio
+    type: rss
+    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/supervisione-normativa-antiriciclaggio&lingua=it
+
+  - id: bankitalia_risoluzione
+    name: Banca d'Italia - Risoluzione e gestione delle crisi
+    type: rss
+    url: https://www.bancaditalia.it/util/index.rss.html?sezione=/compiti/risoluzione-gestione-crisi&lingua=it
+
+  # ---- Italia: IVASS ------------------------------------------------------ #
   - id: ivass
     name: IVASS - normativa e provvedimenti
     type: rss
-    url: TODO_FEED_URL                     # URL RSS IVASS da trovare al primo run
+    url:                                   # auto-rilevamento (link RSS nel footer)
+      - https://www.ivass.it/
+      - https://www.ivass.it/normativa/
 
+  # ---- Italia: CONSOB (scraping, da affinare) ----------------------------- #
   - id: consob
     name: CONSOB - bollettino, newsletter, consultazioni
     type: scrape
@@ -53,40 +59,35 @@ sources:
       - https://www.consob.it/web/area-pubblica/bollettino
       - https://www.consob.it/web/area-pubblica/newsletter/recenti
       - https://www.consob.it/web/area-pubblica/consultazioni/in-corso
-    notes: "Nessun RSS. Selettori da tarare dopo il primo run. Punto piu' fragile."
+    notes: "Selettori da affinare guardando i link grezzi del JSON. Fonte fragile."
 
-  # ---- UE: legislazione (EUR-Lex) -----------------------------------------
+  # ---- UE: legislazione (fase 1b) ----------------------------------------- #
   - id: eurlex
     name: EUR-Lex - GUUE serie L + delegati/RTS/ITS (filtrato)
     type: eurlex_anchor
-    notes: "Implementazione dedicata in fase 1b. Vedi sezione 'eurlex' in fondo."
+    notes: "Implementazione dedicata in fase 1b."
 
-  # ---- Italia: legislazione primaria --------------------------------------
+  # ---- Italia: legislazione primaria (fase 1b) ---------------------------- #
   - id: gazzetta_ufficiale
     name: Gazzetta Ufficiale - Serie Generale
     type: rss
-    url: TODO_FEED_URL                     # feed GU da trovare (insieme a EUR-Lex, fase 1b)
-    notes: "Trigger per la normativa primaria IT."
+    url: TODO_FEED_URL                     # da trovare in fase 1b
+    notes: "Trigger normativa primaria IT."
 
   - id: normattiva
     name: Normattiva - testo consolidato (solo link)
     type: link_target_only
     url: https://www.normattiva.it/
 
-  # ---- Antenna di scoperta (solo titolo+link, mai il testo) ---------------
+  # ---- Antenna di scoperta (solo titolo+link) ----------------------------- #
   - id: dirittobancario
     name: dirittobancario.it - flash news (discovery)
     type: discovery
-    url:                                   # candidati - da confermare
-      - https://www.dirittobancario.it/feed/
-      - https://www.dirittobancario.it/cat/flash-news/feed/
-    notes: >
-      Solo titolo+link per scoprire cosa e' nuovo; il testo NON viene mai
-      salvato (riassunti protetti da copyright). Verificare anche i ToS/robots.
+    url: https://www.dirittobancario.it/feed/               # CONFERMATO
 
 
 # ============================================================================
-#  EUR-LEX: filtro a doppia rete (usato in fase 1b)
+#  EUR-LEX: filtro a doppia rete (usato in fase 1b) - invariato
 # ============================================================================
 eurlex:
   subject_filter:
@@ -101,8 +102,8 @@ eurlex:
 
   anchor_acts:
     banche_prudenziale:
-      - CRR    - Regulation (EU) No 575/2013     # cattura anche CRR3
-      - CRD    - Directive 2013/36/EU            # cattura anche CRD6
+      - CRR    - Regulation (EU) No 575/2013
+      - CRD    - Directive 2013/36/EU
       - BRRD   - Directive 2014/59/EU
       - SRMR   - Regulation (EU) No 806/2014
       - DGSD   - Directive 2014/49/EU
@@ -137,7 +138,7 @@ eurlex:
       - EMD  - Directive 2009/110/EC
       - PSD3_PSR - PROPOSTA: tracciare la procedura, non un CELEX finale
     antiriciclaggio:
-      - AMLR  - Regulation (EU) 2024/1624        # CELEX da confermare
+      - AMLR  - Regulation (EU) 2024/1624
       - AMLD6 - Directive (EU) 2024/1640
       - AMLA  - Regulation (EU) 2024/1620
     finanza_sostenibile:
