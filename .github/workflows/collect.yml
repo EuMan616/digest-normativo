@@ -1,12 +1,16 @@
-name: Raccolta (fase 1 - test manuale)
+name: Digest normativo (raccolta + elaborazione)
 
-# Per ora si avvia solo a mano, con il pulsante "Run workflow" nella scheda Actions.
-# Lo scheduling automatico giornaliero lo aggiungeremo nella fase 4.
+# Per ora avvio manuale (pulsante "Run workflow"). Lo scheduling giornaliero
+# automatico lo attiviamo nella fase finale, insieme all'email.
 on:
   workflow_dispatch:
 
+# Serve per salvare lo storico (state/seen.json) nel repo a fine esecuzione.
+permissions:
+  contents: write
+
 jobs:
-  raccolta:
+  digest:
     runs-on: ubuntu-latest
     steps:
       - name: Scarica il codice del repo
@@ -20,12 +24,24 @@ jobs:
       - name: Installa le dipendenze
         run: pip install -r requirements.txt
 
-      - name: Esegui la raccolta
+      - name: Raccolta (fase 1)
         run: python collect.py
 
-      - name: Carica i risultati come artifact scaricabile
-        if: always()            # carica anche se qualcosa va storto
+      - name: Elaborazione - novita' e deduplica (fase 2)
+        run: python process.py
+
+      - name: Salva lo storico nel repo
+        if: always()
+        run: |
+          git config user.name "digest-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/seen.json || true
+          git diff --staged --quiet || git commit -m "Aggiorna storico digest [skip ci]"
+          git push || echo "niente da pushare"
+
+      - name: Carica i risultati come artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: raccolta
+          name: digest
           path: data/
