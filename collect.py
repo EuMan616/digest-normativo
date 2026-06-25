@@ -25,6 +25,7 @@ import datetime
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urljoin
 
 import yaml
 import requests
@@ -107,44 +108,83 @@ def _clean_text(html_or_text: str, limit: int = 600) -> str:
 # --------------------------------------------------------------------------- #
 #  Fetcher per tipo
 # --------------------------------------------------------------------------- #
+def _items_from_feed(feed, source: dict) -> list[Item]:
+    items = []
+    for e in feed.entries[:MAX_ITEMS_PER_SOURCE]:
+        items.append(Item(
+            source_id=source["id"],
+            source_name=source["name"],
+            title=(e.get("title") or "").strip(),
+            link=(e.get("link") or "").strip(),
+            published=_parse_date(e),
+            summary_raw=_clean_text(e.get("summary", "")),
+            item_type="rss",
+            fetched_at=_now_iso(),
+        ))
+    return items
+
+
+def _discover_feed_links(html_bytes: bytes, base_url: str) -> list[str]:
+    """Cerca nell'HTML i tag <link> che dichiarano un feed RSS/Atom."""
+    out: list[str] = []
+    soup = BeautifulSoup(html_bytes, "lxml")
+    for ln in soup.find_all("link"):
+        ltype = (ln.get("type") or "").lower()
+        href = ln.get("href")
+        if href and ("rss" in ltype or "atom" in ltype):
+            out.append(urljoin(base_url, href))
+    return out
+
+
 def fetch_rss(source: dict) -> tuple[list[Item], list[str]]:
     """Legge un feed RSS/Atom. Prova in ordine gli URL candidati e si ferma
-    al primo che restituisce voci. Ritorna (items, note_diagnostiche)."""
+    al primo che restituisce voci. Se un URL e' una pagina HTML (non un feed),
+    cerca il feed dichiarato dentro la pagina (auto-rilevamento)."""
     notes: list[str] = []
     urls = _candidate_urls(source)
     if not urls:
         return [], ["nessun URL configurato"]
 
     for url in urls:
+        # 1) prova diretta come feed
         try:
             if url.startswith(("http://", "https://")):
                 resp = _http_get(url)
-                feed = feedparser.parse(resp.content)
+                content, final_url = resp.content, str(resp.url)
             else:
-                feed = feedparser.parse(url)  # path locale (usato nei test)
+                feed = feedparser.parse(url)  # path locale (test)
+                if feed.entries:
+                    items = _items_from_feed(feed, source)
+                    notes.append(f"{url} -> OK, {len(items)} voci")
+                    return items, notes
+                notes.append(f"{url} -> 0 voci")
+                continue
         except Exception as ex:
             notes.append(f"{url} -> errore richiesta: {ex}")
             continue
 
-        if not feed.entries:
-            why = f" ({feed.bozo_exception})" if getattr(feed, "bozo", 0) else ""
-            notes.append(f"{url} -> 0 voci{why}")
-            continue
+        feed = feedparser.parse(content)
+        if feed.entries:
+            items = _items_from_feed(feed, source)
+            notes.append(f"{url} -> OK, {len(items)} voci")
+            return items, notes
 
-        items = []
-        for e in feed.entries[:MAX_ITEMS_PER_SOURCE]:
-            items.append(Item(
-                source_id=source["id"],
-                source_name=source["name"],
-                title=(e.get("title") or "").strip(),
-                link=(e.get("link") or "").strip(),
-                published=_parse_date(e),
-                summary_raw=_clean_text(e.get("summary", "")),
-                item_type="rss",
-                fetched_at=_now_iso(),
-            ))
-        notes.append(f"{url} -> OK, {len(items)} voci")
-        return items, notes
+        # 2) non e' un feed: prova ad auto-rilevare il feed dichiarato nell'HTML
+        discovered = _discover_feed_links(content, final_url)
+        for d in discovered:
+            try:
+                r2 = _http_get(d)
+                feed2 = feedparser.parse(r2.content)
+                if feed2.entries:
+                    items = _items_from_feed(feed2, source)
+                    notes.append(f"{url} -> 0 voci; AUTO-RILEVATO feed {d} -> OK, {len(items)} voci")
+                    return items, notes
+            except Exception as ex:
+                notes.append(f"auto-rilevato {d} -> errore: {ex}")
+        if discovered:
+            notes.append(f"{url} -> 0 voci; feed dichiarati ma vuoti: {discovered}")
+        else:
+            notes.append(f"{url} -> 0 voci; nessun feed dichiarato nella pagina")
 
     return [], notes
 
