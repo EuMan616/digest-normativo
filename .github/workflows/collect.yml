@@ -1,0 +1,31 @@
+name: Raccolta (fase 1 - test manuale)
+
+# Per ora si avvia solo a mano, con il pulsante "Run workflow" nella scheda Actions.
+# Lo scheduling automatico giornaliero lo aggiungeremo nella fase 4.
+on:
+  workflow_dispatch:
+
+jobs:
+  raccolta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice del repo
+        uses: actions/checkout@v4
+
+      - name: Prepara Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa le dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Esegui la raccolta
+        run: python collect.py
+
+      - name: Carica i risultati come artifact scaricabile
+        if: always()            # carica anche se qualcosa va storto
+        uses: actions/upload-artifact@v4
+        with:
+          name: raccolta
+          path: data/
