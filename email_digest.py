@@ -94,6 +94,11 @@ def render_html(digest: dict) -> str:
       <div style="color:#666;font-size:13px;margin-bottom:24px;">{date} &middot;
         {len(primary)} atti &middot; {len(signals)} segnalazioni</div>"""]
 
+    if not primary and not signals:
+        parts.append('<div style="font-size:15px;color:#444;margin:8px 0 16px;">'
+                     'Nessuna novità normativa per oggi. Controllo automatico '
+                     'eseguito regolarmente: il sistema funziona.</div>')
+
     if primary:
         parts.append('<h2 style="font-size:15px;text-transform:uppercase;'
                       'letter-spacing:.5px;color:#444;">Atti</h2>')
@@ -146,6 +151,9 @@ def render_text(digest: dict) -> str:
     signals = digest.get("signals", [])
     lines = [f"DIGEST NORMATIVO - {digest.get('generated_at', _today())}",
              f"{len(primary)} atti, {len(signals)} segnalazioni", ""]
+    if not primary and not signals:
+        lines.append("Nessuna novità normativa per oggi. "
+                     "Controllo automatico eseguito regolarmente: il sistema funziona.")
     for it in primary:
         lines.append(f"[{it.get('source_name','')}] {_clean_title(it.get('title',''))}")
         date_it = _format_date_it(it.get("published"))
@@ -194,10 +202,8 @@ def run() -> int:
     preview.write_text(html_body, encoding="utf-8")
     print(f"Anteprima salvata: {preview.relative_to(ROOT)}")
 
-    send_if_empty = os.environ.get("SEND_IF_EMPTY", "").strip().lower() in ("1", "true", "yes")
-    if not primary and not signals and not send_if_empty:
-        print("Nessuna novita' oggi: email non inviata.")
-        return 0
+    if not primary and not signals:
+        print("Nessuna novita' oggi: invio email di conferma (nessuna novita').")
 
     user = os.environ.get("GMAIL_USER", "").strip()
     app_password = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
@@ -207,7 +213,10 @@ def run() -> int:
               "email NON inviata (anteprima comunque salvata).")
         return 0
 
-    subject = f"Digest normativo - {_today()} ({len(primary)} atti)"
+    if primary or signals:
+        subject = f"Digest normativo - {_today()} ({len(primary)} atti)"
+    else:
+        subject = f"Digest normativo - {_today()} - nessuna novità"
     try:
         send_gmail(user, app_password, to_addr, subject, text_body, html_body)
         print(f"Email inviata a {to_addr}.")
