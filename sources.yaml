@@ -29,7 +29,28 @@ sources:
     name: BCE - Vigilanza bancaria europea (pubblicazioni)
     type: rss
     url: https://www.bankingsupervision.europa.eu/rss/pub.html   # CONFERMATO
-    # comunicati stampa BCE (opzionale): https://www.bankingsupervision.europa.eu/rss/press.html
+
+  - id: ecb_vigilanza_press
+    name: BCE - Vigilanza bancaria europea (comunicati)
+    type: rss
+    url: https://www.bankingsupervision.europa.eu/rss/press.html
+
+  # ---- Italia: associazioni di categoria (soft-law, non normativa vincolante)
+  # NB: feed da confermare al primo run (siti WordPress, URL non verificato).
+  - id: assosim
+    name: Assosim - circolari e risposte a consultazioni
+    type: rss
+    url:
+      - https://www.assosim.it/circolari/feed/
+      - https://www.assosim.it/circolari/
+      - https://www.assosim.it/feed/
+
+  - id: assogestioni
+    name: Assogestioni - comunicati stampa
+    type: rss
+    url:
+      - https://www.assogestioni.it/feed/
+      - https://www.assogestioni.it/categoria-articolo/comunicati-stampa
 
   # ---- Italia: Banca d'Italia (3 sezioni del perimetro) ------------------- #
   - id: bankitalia_vigilanza
