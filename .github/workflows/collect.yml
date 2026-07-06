@@ -4,7 +4,7 @@ on:
   # Esecuzione automatica giornaliera. 05:00 UTC = 07:00 in Italia d'estate,
   # 06:00 d'inverno (GitHub usa UTC e non gestisce l'ora legale).
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "7 3 * * *"     # 03:07 UTC = 05:07 IT estate / 04:07 inverno
   # Avvio manuale dal pulsante "Run workflow"
   workflow_dispatch:
     inputs:
