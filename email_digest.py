@@ -170,18 +170,18 @@ def render_text(digest: dict) -> str:
 
 
 # --- Invio -------------------------------------------------------------------
-def send_gmail(user: str, app_password: str, to_addr: str, subject: str,
+def send_gmail(user: str, app_password: str, recipients: list[str], subject: str,
                text_body: str, html_body: str) -> None:
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = user
-    msg["To"] = to_addr
+    msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(text_body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx) as server:
         server.login(user, app_password)
-        server.sendmail(user, [to_addr], msg.as_string())
+        server.sendmail(user, recipients, msg.as_string())
 
 
 def run() -> int:
@@ -207,7 +207,8 @@ def run() -> int:
 
     user = os.environ.get("GMAIL_USER", "").strip()
     app_password = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
-    to_addr = os.environ.get("DIGEST_TO", "").strip() or user
+    to_raw = os.environ.get("DIGEST_TO", "").strip() or user
+    recipients = [a.strip() for a in to_raw.split(",") if a.strip()]
     if not user or not app_password:
         print("ATTENZIONE: GMAIL_USER / GMAIL_APP_PASSWORD non impostati: "
               "email NON inviata (anteprima comunque salvata).")
@@ -218,8 +219,8 @@ def run() -> int:
     else:
         subject = f"Digest normativo - {_today()} - nessuna novità"
     try:
-        send_gmail(user, app_password, to_addr, subject, text_body, html_body)
-        print(f"Email inviata a {to_addr}.")
+        send_gmail(user, app_password, recipients, subject, text_body, html_body)
+        print(f"Email inviata a {', '.join(recipients)}.")
     except Exception as ex:
         print(f"ERRORE invio email: {ex}")
         return 1
